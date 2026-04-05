@@ -2,6 +2,8 @@
 
 本案例演示如何基于 MindSpore 和 MindNLP 构建一个“真人照片 -> 指定风格图像”的最小可运行应用。
 
+面向中文读者的模块接口与使用说明见：`docs/module_interfaces_zh.md`
+
 ## 目录结构
 
 - `notebooks/photo2style_zh.ipynb`：中文教学版 Notebook（提交主文件）
@@ -10,6 +12,7 @@
 - `examples/run_once.py`：单张图片推理脚本
 - `docs/checklist.md`：合入前自检项
 - `docs/pr_template_zh.md`：PR 文案模板
+- `docs/module_interfaces_zh.md`：模块接口与使用说明
 - `requirements.txt`：依赖清单
 
 ## 环境要求

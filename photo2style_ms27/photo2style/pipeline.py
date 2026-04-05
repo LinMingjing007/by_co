@@ -1,4 +1,11 @@
-"""Photo to style pipeline for MindSpore 2.7.0 + MindNLP 0.5.1."""
+"""真人照片转风格图像的轻量推理管线。
+
+该模块提供：
+
+- ``Photo2StylePipeline``: 输入图像并执行风格化
+- ``StyleResult``: 返回风格名称和 RGB 结果图
+- ``parse_style_text``: 将中文/英文提示词映射为内部风格名
+"""
 
 from __future__ import annotations
 
@@ -12,6 +19,7 @@ import numpy as np
 
 
 def _load_mindspore():
+    """按需加载 MindSpore，避免在纯 NumPy 环境下导入失败。"""
     try:
         ms_mod = importlib.import_module("mindspore")
         return ms_mod, getattr(ms_mod, "Tensor"), getattr(ms_mod, "ops")
@@ -31,12 +39,26 @@ STYLE_PRESETS: Dict[str, Dict[str, float]] = {
 
 @dataclass
 class StyleResult:
+    """风格化结果。
+
+    Attributes:
+        style_name: 最终采用的内部风格名。
+        image_rgb: 风格化后的 RGB 图像数组，类型为 ``np.uint8``。
+    """
+
     style_name: str
     image_rgb: np.ndarray
 
 
 class Photo2StylePipeline:
-    """Rule-based stylization pipeline that integrates MindSpore tensor ops."""
+    """照片转风格图像的推理入口。
+
+    该实现以 OpenCV 为主，MindSpore 仅用于演示张量后处理链路。
+
+    Args:
+        use_mindspore: 是否尝试启用 MindSpore 后端。
+        device_target: MindSpore 运行设备，例如 ``CPU``、``GPU`` 或 ``Ascend``。
+    """
 
     def __init__(self, use_mindspore: bool = True, device_target: str = "CPU") -> None:
         self.backend = "numpy"
@@ -46,6 +68,15 @@ class Photo2StylePipeline:
             self.backend = "mindspore"
 
     def stylize(self, image_bgr: np.ndarray, style_name: str = "ghibli") -> StyleResult:
+        """对单张 BGR 图像执行风格化。
+
+        Args:
+            image_bgr: OpenCV 读取后的 BGR 图像数组。
+            style_name: 内部风格名，支持 ``ghibli``、``disney``、``ink``、``sketch``。
+
+        Returns:
+            ``StyleResult``，其中结果图为 RGB 排列。
+        """
         if style_name not in STYLE_PRESETS:
             raise ValueError(f"Unknown style: {style_name}. Available: {list(STYLE_PRESETS)}")
 
@@ -74,12 +105,14 @@ class Photo2StylePipeline:
         return StyleResult(style_name=style_name, image_rgb=rgb)
 
     def stylize_path(self, image_path: str | Path, style_name: str = "ghibli") -> StyleResult:
+        """从图片路径读取文件并执行风格化。"""
         image = cv2.imread(str(image_path))
         if image is None:
             raise FileNotFoundError(f"Cannot read image: {image_path}")
         return self.stylize(image, style_name)
 
     def _tone_adjust(self, image_rgb: np.ndarray, cfg: Dict[str, float]) -> np.ndarray:
+        """执行饱和度、对比度和 gamma 调整。"""
         x = image_rgb.astype(np.float32) / 255.0
         gray = x.mean(axis=2, keepdims=True)
         x = gray + cfg["saturation"] * (x - gray)
@@ -95,7 +128,16 @@ class Photo2StylePipeline:
 
 
 def parse_style_text(style_prompt: str) -> Tuple[str, str]:
-    """Simple Chinese keyword parser for style control, compatible with MindNLP workflows."""
+    """将自然语言风格提示词解析为内部风格名。
+
+    Args:
+        style_prompt: 用户输入的中文或英文风格描述。
+
+    Returns:
+        一个二元组 ``(style_name, message)``：
+        ``style_name`` 为内部风格名，
+        ``message`` 为解析说明，便于日志展示。
+    """
     prompt = style_prompt.strip().lower()
     mapping = {
         "吉卜力": "ghibli",

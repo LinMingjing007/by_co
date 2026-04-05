@@ -10,6 +10,7 @@ pipe = Photo2StylePipeline(use_mindspore=True)
 
 
 def run_demo(image: np.ndarray, style_prompt: str):
+    """Gradio 推理回调函数。"""
     if image is None:
         raise gr.Error("请先上传一张真人照片")
 
